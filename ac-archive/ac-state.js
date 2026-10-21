@@ -1,0 +1,5 @@
+export const SUBJECT_ID='SP-0004';
+export const SCAN_DURATION=6600;
+export function scanFrame(elapsed,duration=SCAN_DURATION){const p=Math.max(0,Math.min(1,elapsed/duration)),clamp=x=>Math.max(0,Math.min(1,x));return{progress:Math.round(clamp((p-.14)/.78)*100),yaw:clamp((p-.18)/.7)*Math.PI*4,surfaceAlpha:0,completion:clamp((p-.16)/.4),objectOpacity:clamp((p-.16)/.07)*clamp((.97-p)/.04),frameOpacity:clamp(p/.055)*clamp((1-p)/.04),frameX:.28+.72*clamp((p-.035)/.095),frameY:.02+.98*clamp((p-.065)/.095),contentOpacity:clamp((p-.14)/.04)*clamp((.97-p)/.03),label:p<.16?'INITIALIZING':p<.6?'STRUCTURE / ACQUIRING':p<.92?'ROTATION / ANALYZING':'RECORD / READY',done:p>=1};}
+export function formatDatum(value){return value===null||value===undefined||value===''?'PENDING VERIFICATION':String(value);}
+export function createController(){let state='space';return{get state(){return state;},open(id){if(id!==SUBJECT_ID)return false;state='scan';return true;},ready(){if(state!=='scan')return false;state='dossier';return true;},back(){state='space';},replay(){if(state!=='dossier')return false;state='scan';return true;}};}

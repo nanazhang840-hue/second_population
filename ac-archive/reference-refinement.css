@@ -1,0 +1,48 @@
+/* Match the approved dossier: dense reconstructed imagery and one status symbol. */
+.dossier-view{padding:26px 4.5%;background:#030709}
+.dossier-shell{max-width:1600px}
+.dossier-header{margin-bottom:17px}
+.dossier-grid{grid-template-columns:1fr 1.02fr;gap:16px;align-items:stretch}
+.visual-column{display:flex;flex-direction:column}
+.object-visual{flex:1;height:auto;min-height:300px;background:#030709}
+#dossier-model.approved-object{top:32px;left:7px;width:calc(100% - 14px);height:calc(100% - 39px);object-fit:contain;image-rendering:auto}
+.visual-caption{display:block;bottom:7px;font-size:10px;letter-spacing:.5px;color:#6e9cab}
+.insets{height:clamp(150px,15vw,232px);gap:13px;margin-top:12px}
+.anatomy{display:flex;flex-direction:column;min-height:0;background:#030709}
+.approved-detail{display:block;width:100%;height:0;flex:1;min-height:0;object-fit:fill;padding:0 5px 6px}
+.mini-heading{font-size:16px;padding:9px 12px 3px}
+.record-name{padding:8px 15px 12px}
+.identity-table>div{min-height:34px}
+.energy-row{min-height:43px!important}
+.energy-row dd{display:flex!important;position:relative;padding:6px 73px 6px 14px;min-height:43px}
+.energy-row dt{font-size:23px}
+.energy-label-status{font:21px var(--pixel);color:var(--ink);margin:0;white-space:nowrap}
+.energy-expression{position:absolute;right:15px;bottom:5px;color:#bce9f8;display:block}
+.energy-expression svg{width:45px;height:45px;fill:currentColor;shape-rendering:crispEdges;filter:drop-shadow(0 0 3px #9ad4e66b)}
+.carbon-body{min-height:160px}
+.carbon-chain svg{border:1px solid #8cbcd0;padding:5px}
+.carbon-chain>div:last-child svg{border:0;padding:0}
+.carbon-chain{gap:8px}
+.carbon-chain .arrow{font-size:24px}
+.resource-box{padding:0 13px 12px}
+.resource-box header{border-bottom:1px solid var(--line);padding:7px 0;margin-bottom:13px}
+.resource-network{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:90px}
+.resource-inputs{flex:1.8;min-width:0}
+.resource-inputs>div{display:flex;align-items:center;gap:8px;margin:11px 0}
+.resource-inputs span,.resource-result{border:1px solid #81b5ca;display:block;flex:1;text-align:center;padding:6px 4px;font:15px/1 var(--pixel)}
+.resource-inputs b,.network-arrow{font:23px var(--pixel);font-weight:400}
+.resource-unit{flex:.8;border:1px solid #81b5ca;padding:6px;text-align:center;font:15px var(--pixel)}
+.resource-unit svg{width:100%;height:55px;stroke:#add7e7;stroke-width:1;fill:none;margin-bottom:4px}
+.resource-result{flex:.8;font-size:16px}
+.dossier-footer{padding-top:12px}
+#operation-toggle{font:14px var(--pixel);letter-spacing:.4px;padding:0;color:#b6e2ef;white-space:nowrap;position:relative;z-index:2}
+#operation-toggle[aria-pressed=true]{text-shadow:0 0 6px #8cdaef}
+.thermal-overlay{position:absolute;pointer-events:none;mix-blend-mode:screen}
+.is-running .carbon-chain .arrow{animation:energyFlow 1.8s steps(8) infinite}
+.is-running .carbon-chain .arrow:last-of-type{animation-delay:.5s}
+.is-running .network-arrow{animation:energyFlow 2.1s steps(9) infinite}
+.is-running .energy-expression{animation:statusGlow 3s ease-in-out infinite}
+@keyframes energyFlow{0%,100%{opacity:.3;text-shadow:none}50%{opacity:1;text-shadow:0 0 8px #c4f3ff}}
+@keyframes statusGlow{0%,100%{opacity:.65}50%{opacity:1}}
+@media(max-width:1100px){.dossier-view{padding:22px 3.5%}.mini-heading{font-size:13px}.record-name h2{font-size:38px}.identity-table dt,.identity-table dd{font-size:17px}.energy-label-status{font-size:17px}.energy-expression svg{width:39px;height:39px}.energy-row dd{padding-right:55px}.energy-expression{right:9px;bottom:4px}.resource-network{gap:6px}.resource-inputs>div{gap:5px}.resource-inputs span{font-size:12px;padding:5px 2px}.resource-unit{font-size:12px}.resource-result{font-size:13px}.resource-unit svg{height:43px}}
+@media(max-width:760px){.dossier-view{padding:17px 4%}.dossier-grid{grid-template-columns:1fr}.object-visual{height:320px;min-height:320px;flex:none}.insets{height:150px}.energy-label-status{font-size:20px}.energy-expression svg{width:42px;height:42px}.resource-network{min-height:100px}.resource-unit svg{height:48px}.resource-inputs span{font-size:14px}.resource-result{font-size:15px}}

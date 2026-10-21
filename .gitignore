@@ -1,0 +1,28 @@
+# 依赖与工具
+node_modules/
+package-lock.json
+package.json
+
+# 构建产物
+dist/
+build/
+.cache/
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地临时文件（预览服务 / 测试脚本 / 截图）
+_nocache_server.py
+_shots/
+_g/
+*.log
+
+# 注意：traffic_clip.mp4（23MB）是运行必需的素材，
+# 按组员要求直接提交，不使用 Git LFS，因此不要在此忽略。

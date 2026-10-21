@@ -1,0 +1,21 @@
+/* Motion and proportions follow the supplied rotating wire-net reference. */
+.scan-view{background:#000}
+.scan-shell{width:min(780px,76vw,calc(68dvh * 1.4));text-shadow:0 0 2px #a0e5ff50}
+.scan-header{height:17px;min-height:17px;margin-bottom:8px;padding:0 6px;border-radius:3px;gap:8px;font:11px/1 var(--pixel);letter-spacing:.5px;box-shadow:0 0 3px #9dd8f133,inset 0 0 2px #9dd8f133;overflow:hidden}
+.scan-header>span{opacity:var(--content-opacity,0);white-space:nowrap}
+.scan-window{aspect-ratio:1.4;border-radius:10px;border-color:#9dccdc;box-shadow:0 0 3px #94d5ec44;transform:scale(var(--frame-x,1),var(--frame-y,1));transform-origin:50% 50%;background:#000}
+.scan-window:after{background:repeating-linear-gradient(0deg,transparent 0 2px,#00000035 2px 3px);opacity:.5}
+.scan-crosses{inset:7% 6%;opacity:var(--content-opacity,0)}
+.scan-crosses span{width:10px;height:10px;opacity:.5}
+.scan-crosses span:before{height:1px;width:10px;top:4px}
+.scan-crosses span:after{width:1px;height:10px;left:4px}
+.scan-crosses span:before,.scan-crosses span:after{background:#87bed0}
+.scan-corner,.scan-drift,.scan-footnote{display:none}
+.scan-meter{width:55%;gap:10px;margin:6px 0 0 7px;opacity:var(--content-opacity,0)}
+.segmented-track{height:8px;padding:0;border:0;background:repeating-linear-gradient(90deg,#355c6a55 0 2px,transparent 2px 4px)}
+.segmented-track>div{background:repeating-linear-gradient(90deg,#b9e9fa 0 2px,transparent 2px 4px);box-shadow:0 0 3px #a3def350}
+#progress-number{font:14px/1 var(--pixel);min-width:33px}
+.scan-copy{position:absolute;right:1px;bottom:0;margin:0;font:11px/1 var(--pixel);letter-spacing:.6px;color:#7eabbc;opacity:var(--content-opacity,0)}
+.scan-copy>span+span{display:none}
+.back-control{font-size:12px;opacity:.4}.back-control:hover,.back-control:focus-visible{opacity:1}
+@media(max-width:760px){.scan-shell{width:88vw}.scan-header{font-size:9px;height:14px;min-height:14px;padding:0 4px;margin-bottom:5px}.scan-window{border-radius:7px}.scan-meter{width:57%;margin-left:4px}.segmented-track{height:6px}#progress-number{font-size:12px}.scan-copy{font-size:8px;letter-spacing:.1px}.scan-crosses span{opacity:.4}}

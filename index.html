@@ -10,23 +10,40 @@
 </head>
 <body class="is-booting">
 
-<!-- ══════════ GLITCH 开场启动界面 ══════════ -->
+<!-- ══════════ GLITCH 开场启动界面 ══════════
+     全屏 canvas 实时演算的 glitch 视频背景（非中央卡片） -->
 <section class="boot" id="bootScreen" aria-label="系统启动">
-  <!-- 噪点 + 扫描线 + 纵向滚动条 -->
-  <div class="boot-noise" aria-hidden="true"></div>
+  <!-- 视觉主体：视频纹理 + 实时损坏处理 -->
+  <canvas id="bootCanvas" class="boot-canvas" aria-hidden="true"></canvas>
+  <video id="bootVideo" src="traffic_clip.mp4" preload="auto" muted playsinline loop hidden></video>
+
+  <!-- 视差层：随鼠标微移 -->
+  <div class="boot-parallax" id="bootParallax" aria-hidden="true">
+    <span class="bp-layer bp-1"></span>
+    <span class="bp-layer bp-2"></span>
+    <span class="bp-layer bp-3"></span>
+  </div>
+
+  <!-- CRT 扫描线 / 噪声 / 暗角 / 下移扫描光带 -->
   <div class="boot-scan" aria-hidden="true"></div>
+  <div class="boot-noise" aria-hidden="true"></div>
   <div class="boot-sweep" aria-hidden="true"></div>
   <div class="boot-vignette" aria-hidden="true"></div>
+  <div class="boot-flash" id="bootFlash" aria-hidden="true"></div>
 
-  <div class="boot-inner">
-    <div class="boot-corner bc-tl" aria-hidden="true"></div>
-    <div class="boot-corner bc-tr" aria-hidden="true"></div>
-    <div class="boot-corner bc-bl" aria-hidden="true"></div>
-    <div class="boot-corner bc-br" aria-hidden="true"></div>
+  <!-- 自定义光标 -->
+  <div class="boot-cursor" id="bootCursor" aria-hidden="true">
+    <span class="bc-ring"></span>
+    <span class="bc-cross-h"></span>
+    <span class="bc-cross-v"></span>
+    <span class="bc-dot"></span>
+  </div>
 
+  <!-- UI 层：散落于全屏，非居中卡片 -->
+  <div class="boot-ui">
     <header class="boot-head">
-      <span>SECOND POPULATION OS</span>
-      <span class="boot-head-r">BUILD 2.4.1 · SIGNAL READY</span>
+      <span class="bh-l"><i class="bh-dot"></i>SECOND POPULATION OS</span>
+      <span class="bh-r">BUILD 2.4.1 · CHANNEL LOCKED</span>
     </header>
 
     <div class="boot-title-wrap">
@@ -35,29 +52,31 @@
       <p class="boot-tag">物品能耗人口普查 · 城市道路监控识别模拟</p>
     </div>
 
-    <!-- 启动日志：JS 逐行揭示 -->
-    <div class="boot-log" id="bootLog" aria-live="polite"></div>
+    <div class="boot-bottom">
+      <!-- 启动日志 -->
+      <div class="boot-log" id="bootLog" aria-live="polite"></div>
 
-    <div class="boot-meter">
-      <div class="boot-meter-track"><i id="bootFill"></i></div>
-      <span id="bootPct">00%</span>
-    </div>
+      <div class="boot-meter">
+        <div class="boot-meter-track"><i id="bootFill"></i></div>
+        <span id="bootPct">00%</span>
+      </div>
 
-    <div class="boot-enter-row">
-      <button id="bootEnter" class="boot-enter" type="button" disabled>
-        <span class="be-frame" aria-hidden="true"></span>
-        <span class="be-label glitch-split-sm" data-text="ENTER SYSTEM">ENTER SYSTEM</span>
-      </button>
-      <div class="boot-hint">
-        <span>或按 <b>ENTER</b> 进入</span>
-        <span class="boot-skip">SKIP INTRO ▸</span>
+      <div class="boot-enter-row">
+        <button id="bootEnter" class="boot-enter" type="button" disabled>
+          <span class="be-frame" aria-hidden="true"></span>
+          <span class="be-label glitch-split-sm" data-text="ENTER SYSTEM">ENTER SYSTEM</span>
+        </button>
+        <div class="boot-hint">
+          <span>或按 <b>ENTER</b> 进入</span>
+          <span class="boot-skip">SKIP INTRO ▸</span>
+        </div>
       </div>
     </div>
 
     <footer class="boot-foot">
-      <span>CHANNEL R/G/B DESYNC — <b id="bootErr">ERR_NONE</b></span>
-      <span>CORRUPTION LEVEL <b id="bootLvl">00%</b></span>
-      <span>© MMXXVI</span>
+      <span>CHANNEL DESYNC — <b id="bootErr">ERR_NONE</b></span>
+      <span>CORRUPTION <b id="bootLvl">00%</b></span>
+      <span class="boot-foot-r">© MMXXVI · 40 OBJECTS</span>
     </footer>
   </div>
 </section>

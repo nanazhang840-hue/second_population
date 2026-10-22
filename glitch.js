@@ -1,11 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   GLITCH RUNTIME — 开场启动序列 + 视频画面信号劣化
-   仅使用 #000000 + #A8D3E0，与全站配色一致
+   GLITCH RUNTIME — 全屏视觉开场 + 信号劣化
+   配色仅用 #000000 + #A8D3E0（含透明度层级）
    参考语法：chrislemke.github.io「Glitch Art」研究页
      · 双通道错位重影（单色青版）
-     · repeating-linear-gradient 扫描线
+     · clip-path + steps() 横向切片位移
      · SVG feTurbulence 噪声
-     · 横向切片位移 + steps() 离散跳变
    ═══════════════════════════════════════════════════════════════════════ */
 (function () {
   "use strict";
@@ -15,7 +14,283 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-  /* ═════════════ 1. 开场启动界面 ═════════════ */
+  /* ═══════════════════════════════════════════════════════════════════
+     1. 全屏 GLITCH 视觉引擎
+     —— 监控视频作纹理，canvas 实时损坏处理
+     管线：视频帧 → 青色调染色 → 通道分离 → 切片位移 → 块位移
+           → 噪声 → 扫描线 → 鼠标磁吸故障
+     ═══════════════════════════════════════════════════════════════════ */
+  const Gfx = (function () {
+    const canvas = $("bootCanvas");
+    const video = $("bootVideo");
+    if (!canvas || !video) return null;
+
+    const ctx = canvas.getContext("2d", { alpha: false });
+    let W = 0, H = 0, dpr = 1;
+
+    /* 离屏画布：噪声瓦片 / 扫描线瓦片，避免每帧重建 */
+    const noiseTile = document.createElement("canvas");
+    noiseTile.width = noiseTile.height = 160;
+    const nctx = noiseTile.getContext("2d");
+    const nimg = nctx.createImageData(160, 160);
+    (function seedNoise() {
+      for (let i = 0; i < nimg.data.length; i += 4) {
+        const v = 120 + Math.random() * 135;
+        nimg.data[i] = nimg.data[i + 1] = nimg.data[i + 2] = v;
+        nimg.data[i + 3] = 255;
+      }
+      nctx.putImageData(nimg, 0, 0);
+    })();
+
+    /* 鼠标状态：位置 + 平滑后的位置 + 是否悬停可交互元素 */
+    const mouse = { x: -999, y: -999, sx: -999, sy: -999, hot: false, active: false };
+
+    /* 故障状态：随时间起伏，鼠标附近加剧 */
+    let t = 0;
+    let baseIntensity = 0.35;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = Math.max(1, canvas.clientWidth);
+      H = Math.max(1, canvas.clientHeight);
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* 主渲染：一帧 */
+    function frame(dt) {
+      t += dt;
+      if (!W || !H) return;
+
+      /* 鼠标平滑跟随（惯性） */
+      mouse.sx += (mouse.x - mouse.sx) * 0.18;
+      mouse.sy += (mouse.y - mouse.sy) * 0.18;
+
+      /* 基础故障强度：慢波 + 偶发尖峰 */
+      const wave = 0.5 + 0.5 * Math.sin(t * 0.0009);
+      const spike = Math.random() < 0.012 ? rnd(1.4, 2.6) : 1;
+      let I = baseIntensity * (0.7 + wave * 0.6) * spike;
+
+      /* 鼠标磁吸：越靠近光标，故障越强 */
+      if (mouse.active) {
+        I *= 1 + (mouse.hot ? 2.6 : 0.9);
+      }
+
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 360;
+      const vReady = video.readyState >= 2;
+
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+
+      if (!vReady) {
+        /* 视频未就绪：画静态故障网格兜底 */
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = "rgba(168,211,224,.3)";
+        ctx.lineWidth = 1;
+        for (let y = 0; y < H; y += 24) {
+          ctx.beginPath();
+          ctx.moveTo(0, y + Math.sin(t * 0.002 + y * 0.05) * 6);
+          ctx.lineTo(W, y + Math.sin(t * 0.002 + y * 0.05) * 6);
+          ctx.stroke();
+        }
+        ctx.restore();
+        return;
+      }
+
+      /* ── 1) 视频铺满（cover 裁剪），带轻微视差缩放 ── */
+      const scale = 1.06 + Math.sin(t * 0.0006) * 0.012;
+      const sw = vw * scale, sh = vh * scale;
+      const sx = (vw - sw) / 2 + (mouse.active ? (mouse.sx - W / 2) * -0.008 : 0);
+      const sy = (vh - sh) / 2 + (mouse.active ? (mouse.sy - H / 2) * -0.008 : 0);
+
+      ctx.save();
+      /* 中档压暗：保住暗部细节（右侧街景），又给文字留可读空间 */
+      ctx.filter = "grayscale(1) contrast(1.15) brightness(0.52)";
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, W, H);
+      ctx.restore();
+
+      /* ── 2) 青色调染色：用 'color' 合成保留亮度、替换色相 ── */
+      ctx.save();
+      ctx.globalCompositeOperation = "color";
+      ctx.fillStyle = "#A8D3E0";
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+
+      /* ── 3) 暗部提细节：soft-light 把死黑区（右侧街景）的层次拉出来 ── */
+      ctx.save();
+      ctx.globalCompositeOperation = "soft-light";
+      ctx.globalAlpha = 0.55;
+      ctx.filter = "grayscale(1) contrast(1.5) brightness(1.6)";
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, W, H);
+      ctx.restore();
+      ctx.filter = "none";
+
+      /* ── 4) 双通道分离：复制两次错位的青调版（模拟 RGB split） ── */
+      const splitPx = (2 + I * 7) * (Math.random() < 0.35 ? 1.8 : 1);
+      const dirA = Math.random() < 0.5 ? -1 : 1;
+
+      for (let k = 0; k < 2; k++) {
+        const off = (k === 0 ? -splitPx : splitPx * 0.8) * dirA;
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = k === 0 ? 0.4 : 0.26;
+        /* 只取视频的一个横条区域，制造通道错位 */
+        const bandY = rnd(0, H * 0.7);
+        const bandH = rnd(H * 0.12, H * 0.55);
+        ctx.drawImage(canvas, 0, bandY * dpr, W * dpr, bandH * dpr, off, bandY, W, bandH);
+        ctx.restore();
+      }
+
+      /* ── 5) 横向切片位移：随机横条整块左右跳 ── */
+      const nSlices = Math.round(1 + I * 3);
+      for (let i = 0; i < nSlices; i++) {
+        const sy2 = rnd(0, H * 0.94);
+        const sh2 = rnd(H * 0.012, H * 0.09);
+        const dx = rnd(-1, 1) * (6 + I * 26);
+        ctx.save();
+        ctx.globalAlpha = rnd(0.55, 0.95);
+        ctx.drawImage(canvas,
+          0, sy2 * dpr, W * dpr, sh2 * dpr,
+          dx, sy2, W, sh2);
+        ctx.restore();
+        /* 切片边缘加一道青色亮线 */
+        if (Math.random() < 0.7) {
+          ctx.save();
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = "#A8D3E0";
+          ctx.fillRect(0, sy2, W, 1);
+          ctx.restore();
+        }
+      }
+
+      /* ── 6) 块状位移（datamosh 感）：随机矩形从错位位置取 ── */
+      if (I > 0.5) {
+        const nBlocks = Math.round(rnd(1, 3));
+        for (let i = 0; i < nBlocks; i++) {
+          const bw = rnd(W * 0.08, W * 0.3);
+          const bh = rnd(H * 0.05, H * 0.2);
+          const bx = rnd(0, W - bw);
+          const by = rnd(0, H - bh);
+          ctx.save();
+          ctx.globalAlpha = rnd(0.6, 0.9);
+          ctx.drawImage(canvas,
+            bx * dpr, by * dpr, bw * dpr, bh * dpr,
+            bx + rnd(-1, 1) * (8 + I * 30), by + rnd(-1, 1) * 4, bw, bh);
+          ctx.restore();
+        }
+      }
+
+      /* ── 7) 鼠标周围的局部故障增强（磁吸核心） ── */
+      if (mouse.active) {
+        const R = mouse.hot ? 240 : 150;
+        const gx = mouse.sx, gy = mouse.sy;
+        /* 以光标为中心叠几道错位横条 */
+        const n = mouse.hot ? 4 : 2;
+        for (let i = 0; i < n; i++) {
+          const hh = rnd(4, 26);
+          const yy = gy + rnd(-R, R);
+          const dx = rnd(-1, 1) * (mouse.hot ? 26 : 12);
+          ctx.save();
+          ctx.globalAlpha = rnd(0.25, 0.6);
+          ctx.drawImage(canvas,
+            0, yy * dpr, W * dpr, hh * dpr,
+            dx, yy, W, hh);
+          ctx.restore();
+        }
+        /* 光标青色光晕 */
+        const rg = ctx.createRadialGradient(gx, gy, 0, gx, gy, R);
+        rg.addColorStop(0, "rgba(168,211,224,.16)");
+        rg.addColorStop(1, "rgba(168,211,224,0)");
+        ctx.save();
+        ctx.fillStyle = rg;
+        ctx.fillRect(gx - R, gy - R, R * 2, R * 2);
+        ctx.restore();
+      }
+
+      /* ── 8) 噪声层（瓦片随机偏移 + steps 感） ── */
+      const nOffX = -Math.floor(rnd(0, 160));
+      const nOffY = -Math.floor(rnd(0, 160));
+      ctx.save();
+      ctx.globalAlpha = 0.055 + I * 0.05;
+      ctx.drawImage(noiseTile, nOffX, nOffY, W + 160, H + 160);
+      ctx.restore();
+
+      /* ── 9) 扫描线 ── */
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = "#000";
+      for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+      ctx.restore();
+
+      /* ── 10) 偶发整帧信号丢失 ── */
+      if (Math.random() < 0.004 + I * 0.006) {
+        const lh = rnd(H * 0.1, H * 0.4);
+        const ly = rnd(0, H - lh);
+        ctx.save();
+        ctx.fillStyle = "rgba(168,211,224,.08)";
+        ctx.fillRect(0, ly, W, lh);
+        ctx.strokeStyle = "rgba(168,211,224,.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, ly);
+        ctx.lineTo(W, ly);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /* ── 11) 转场期：整体强度爆表（由 JS 设置） ── */
+      if (collapseBoost > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = collapseBoost * 0.3;
+        ctx.fillStyle = "#A8D3E0";
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+    }
+
+    /* 转场增强：进入时被设为 1，逐帧衰减 */
+    let collapseBoost = 0;
+    function boost(v) { collapseBoost = v; }
+
+    return {
+      init: function () {
+        resize();
+        window.addEventListener("resize", resize);
+      },
+      frame: frame,
+      boost: boost,
+      mouse: mouse,
+      video: video
+    };
+  })();
+
+  /* ═════════════ 2. 自定义准星光标 ═════════════ */
+  const cursor = $("bootCursor");
+  let lastT = 0;
+
+  function trackMouse(e) {
+    if (!Gfx) return;
+    const r = cursor.getBoundingClientRect();
+    Gfx.mouse.x = e.clientX;
+    Gfx.mouse.y = e.clientY;
+    Gfx.mouse.active = true;
+    if (cursor) {
+      cursor.classList.add("is-on");
+      cursor.style.transform = "translate(" + e.clientX + "px," + e.clientY + "px)";
+    }
+    /* 悬停检测：可交互元素 → 光标变形 + 故障加剧 */
+    const hot = e.target.closest && e.target.closest("button, .boot-skip, .be-label");
+    Gfx.mouse.hot = !!hot;
+    if (cursor) cursor.classList.toggle("is-hot", !!hot);
+  }
+
+  /* ═════════════ 3. 启动序列 ═════════════ */
   const bootScreen = $("bootScreen");
   const bootLog = $("bootLog");
   const bootFill = $("bootFill");
@@ -24,7 +299,6 @@
   const bootLvl = $("bootLvl");
   const bootEnter = $("bootEnter");
   const bootSkip = document.querySelector(".boot-skip");
-
   let bootDone = false;
 
   const BOOT_LINES = [
@@ -60,7 +334,6 @@
     el.appendChild(idxEl);
     el.appendChild(txtEl);
     bootLog.appendChild(el);
-    // 只保留最近 6 行，模拟终端滚动
     while (bootLog.children.length > 6) bootLog.removeChild(bootLog.firstChild);
   }
 
@@ -68,16 +341,12 @@
     if (!bootLog) { finishBoot(); return; }
     let i = 0;
     const total = BOOT_LINES.length;
-
     (function next() {
       if (i >= total) { finishBoot(); return; }
-      const item = BOOT_LINES[i];
-      pushLogLine(item, i);
+      pushLogLine(BOOT_LINES[i], i);
       i++;
       setProgress(Math.round(92 * (i / total)));
-
-      // 偶发注入伪造传输错误，强化 glitch 叙事
-      if (!reduced && Math.random() < 0.22) {
+      if (!reduced && Math.random() < 0.25) {
         if (bootErr) bootErr.textContent = pick(["ERR_NONE", "0x00", "FRAME_OFFSET", "CRC_MISMATCH", "0xDEAD"]);
         if (bootLvl) bootLvl.textContent = Math.round(rnd(8, 94)).toString().padStart(2, "0") + "%";
       }
@@ -93,16 +362,30 @@
     }
   }
 
+  /* ═════════════ 4. 转场：信号崩塌 ═════════════ */
   function enterSite() {
     if (bootDone) return;
     bootDone = true;
     if (!reduced && bootScreen) bootScreen.classList.add("is-collapsing");
     document.body.classList.remove("is-booting");
+
+    /* 转场期：canvas 故障强度爆表，逐帧衰减 */
+    if (Gfx && !reduced) {
+      let b = 1;
+      const decay = setInterval(function () {
+        b -= 0.07;
+        if (b <= 0) { clearInterval(decay); Gfx.boost(0); return; }
+        Gfx.boost(b);
+      }, 45);
+      /* 同时让视频快进，增强撕裂感 */
+      if (Gfx.video) { try { Gfx.video.playbackRate = 2.4; } catch (e) {} }
+    }
+
     setTimeout(function () {
       if (bootScreen && bootScreen.parentNode) bootScreen.parentNode.removeChild(bootScreen);
       startDegrade();
       window.dispatchEvent(new CustomEvent("boot:entered"));
-    }, reduced ? 60 : 560);
+    }, reduced ? 60 : 640);
   }
 
   if (bootEnter) bootEnter.addEventListener("click", enterSite);
@@ -116,36 +399,31 @@
     }
   });
 
-  /* ═════════════ 2. 视频画面：随机横向切片 ═════════════
-     手法参考 Glitch Art 页的 clip-path 切片位移 + steps() 跳变。 */
+  /* ═════════════ 5. 主站视频信号劣化（原有功能） ═════════════ */
   const degrade = $("sigDegrade");
   const sliceHost = $("sdSlices");
-  let level = 1;              // 默认轻度
+  let level = 1;
   let sliceTimer = null;
 
   function spawnSlice() {
     if (!sliceHost) return;
     const el = document.createElement("i");
     el.className = "sd-slice";
-    const h = rnd(2, 9);              // 条高 2–9%
+    const h = rnd(2, 9);
     const top = rnd(0, 96);
-    const shift = rnd(-3.2, 3.2);     // 错位幅度（刻意克制）
+    const shift = rnd(-3.2, 3.2);
     const dur = Math.round(rnd(90, 220));
     el.style.height = h + "%";
     el.style.top = top + "%";
     el.style.opacity = "0";
     sliceHost.appendChild(el);
-
-    // 首帧：瞬间错位
     el.style.transform = "translateX(" + shift.toFixed(2) + "px)";
     el.style.opacity = String(rnd(0.10, 0.24));
-    // 下一帧：steps(2) 分段归位 —— 跳变而非平滑滑动
     requestAnimationFrame(function () {
       el.style.transition = "transform " + dur + "ms steps(2), opacity " + dur + "ms steps(2)";
       el.style.transform = "translateX(0)";
       el.style.opacity = "0";
     });
-
     setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, dur + 60);
   }
 
@@ -179,11 +457,54 @@
     });
   }
 
-  /* 启动 */
-  if (bootScreen) {
+  /* ═════════════ 6. 启动 ═════════════ */
+  if (Gfx && !reduced) {
+    Gfx.init();
+
+    /* 视频静音自动播放（浏览器策略兜底） */
+    Gfx.video.muted = true;
+    const tryPlay = function () {
+      const pr = Gfx.video.play();
+      if (pr && pr.catch) pr.catch(function () {
+        /* 被拦截 → 等首次交互再播 */
+        document.addEventListener("pointerdown", function once() {
+          document.removeEventListener("pointerdown", once);
+          Gfx.video.play().catch(function () {});
+        });
+      });
+    };
+    if (Gfx.video.readyState >= 2) tryPlay();
+    else Gfx.video.addEventListener("loadeddata", tryPlay, { once: true });
+
+    /* 主循环 */
+    (function loop(now) {
+      if (!lastT) lastT = now;
+      const dt = Math.min(48, now - lastT);
+      lastT = now;
+      Gfx.frame(dt);
+      requestAnimationFrame(loop);
+    })(performance.now());
+
+    /* 鼠标交互 */
+    window.addEventListener("mousemove", trackMouse, { passive: true });
+    window.addEventListener("mouseleave", function () {
+      Gfx.mouse.active = false;
+      if (cursor) cursor.classList.remove("is-on");
+    });
+
     runBootSequence();
   } else {
+    /* reduced-motion 或缺少 canvas：退化为纯文字序列 */
     document.body.classList.remove("is-booting");
+    if (Gfx) { Gfx.init(); runBootSequence(); }
+    else { runBootSequence(); }
+    if (bootEnter) bootEnter.disabled = false;
+    /* 无动画时也要能进主站 */
+    if (bootEnter) bootEnter.addEventListener("click", function () {
+      document.body.classList.remove("is-booting");
+      if (bootScreen && bootScreen.parentNode) bootScreen.parentNode.removeChild(bootScreen);
+      startDegrade();
+    });
     startDegrade();
   }
 })();

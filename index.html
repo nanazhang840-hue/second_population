@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="看见另一种人口 — 物品能耗人口普查 · 城市道路监控识别模拟">
-<title>SECOND POPULATION — 看见另一种人口 / OBJECT ARCHIVE</title>
+<title>第二人口 SECOND POPULATION — OBJECT ARCHIVE</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Crect x='5' y='11' width='22' height='3' fill='%23A8D3E0'/%3E%3Crect x='9' y='18' width='15' height='3' fill='%23A8D3E0'/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="glitch.css">
 </head>
@@ -43,14 +44,29 @@
   <div class="boot-ui">
     <header class="boot-head">
       <span class="bh-l"><i class="bh-dot"></i>SECOND POPULATION OS</span>
-      <span class="bh-r">BUILD 2.4.1 · CHANNEL LOCKED</span>
+      <span class="bh-r">
+        <button id="sfxBtn" class="sfx-btn" type="button" aria-label="切换音效">SFX <b id="sfxState">ON</b></button>
+        <span class="bh-build">BUILD 2.5.0 · CHANNEL NOISY</span>
+      </span>
     </header>
 
-    <div class="boot-title-wrap">
-      <h2 class="boot-title glitch-split" data-text="看见另一种人口">看见另一种人口</h2>
+    <div class="boot-title-wrap" id="bootTitleWrap">
+      <h2 class="boot-title" id="bootTitle" data-text="第二人口">第二人口</h2>
       <p class="boot-sub glitch-split-sm" data-text="SECOND POPULATION">SECOND POPULATION</p>
-      <p class="boot-tag">物品能耗人口普查 · 城市道路监控识别模拟</p>
+      <p class="boot-tag">人类之外，还有一群人。他们由钢铁、塑料与电流构成。</p>
+      <p class="boot-tag2">城市道路监控 · 物品能耗人口普查</p>
     </div>
+
+    <!-- 唤醒玩法面板：右下 -->
+    <aside class="boot-awake" id="bootAwake" aria-live="polite">
+      <div class="ba-head">
+        <span class="ba-title">SECOND POPULATION</span>
+        <span class="ba-count"><b id="awakeCount">0</b>/<span id="awakeTotal">9</span></span>
+      </div>
+      <div class="ba-bar"><i id="awakeBar"></i></div>
+      <div class="ba-hint" id="awakeHint">移动鼠标 · 在噪声中扫出它们</div>
+      <ul class="ba-feed" id="awakeFeed"></ul>
+    </aside>
 
     <div class="boot-bottom">
       <!-- 启动日志 -->
@@ -79,6 +95,12 @@
       <span class="boot-foot-r">© MMXXVI · 40 OBJECTS</span>
     </footer>
   </div>
+
+  <!-- 一次性中央提示 -->
+  <div class="boot-tip" id="bootTip" aria-hidden="true">
+    <span class="bt-line">MOVE TO SCAN</span>
+    <span class="bt-sub">噪声里藏着 9 个第二人口 · 用鼠标扫过即可唤醒</span>
+  </div>
 </section>
 
 <!-- ══════════ 顶栏 ══════════ -->
@@ -86,7 +108,7 @@
   <div class="brand">
     <span class="brand-mark"></span>
     <div class="brand-text">
-      <h1>看见另一种人口<span class="sub">SECOND POPULATION</span></h1>
+      <h1>第二人口<span class="sub">SECOND POPULATION</span></h1>
     </div>
   </div>
   <div class="top-meta">

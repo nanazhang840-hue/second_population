@@ -190,6 +190,18 @@
     });
   }
 
+  /* 轮拱：在车轮上方画一段半圆弧（朝外的平面），强化「整车」剪影 */
+  function addWheelArch(m, cx, cy, z, r) {
+    const seg = 14;
+    let prev = null;
+    for (let i = 0; i <= seg; i++) {
+      const a = Math.PI * 0.10 + (i / seg) * Math.PI * 0.80; // 上半弧
+      const p = [cx + Math.cos(a) * r, cy + Math.sin(a) * r, z];
+      if (prev) m.stroke(prev, p, 0.5, 0.22);
+      prev = p;
+    }
+  }
+
   /* ─────────── 车辆：轿车 ─────────── */
   function buildSedan(m) {
     const W = 4.4, D = 1.9;
@@ -225,6 +237,8 @@
     for (const x of [-1.42, 1.40]) {
       addWheel(m, x, -0.40, 0.96, 0.66, 0.42, 0.30, 0.26);
       addWheel(m, x, -0.40, -0.96, -0.66, 0.42, 0.30, 0.26);
+      addWheelArch(m, x, -0.40, 0.96, 0.50);
+      addWheelArch(m, x, -0.40, -0.96, 0.50);
     }
     m.size = { w: W, h: 1.3, d: D };
     m.ground = -0.82;
@@ -262,6 +276,8 @@
     for (const x of [-1.48, 1.46]) {
       addWheel(m, x, -0.38, 1.00, 0.66, 0.47, 0.34, 0.30);
       addWheel(m, x, -0.38, -1.00, -0.66, 0.47, 0.34, 0.30);
+      addWheelArch(m, x, -0.38, 1.00, 0.55);
+      addWheelArch(m, x, -0.38, -1.00, 0.55);
     }
     m.size = { w: W, h: 1.75, d: D };
     m.ground = -0.85;
@@ -303,6 +319,10 @@
     addWheel(m, -1.60, -0.44, -1.02, -0.70, 0.48, 0.32, 0.30);
     addWheel(m, -2.30, -0.44, 1.02, 0.70, 0.48, 0.32, 0.30);
     addWheel(m, -2.30, -0.44, -1.02, -0.70, 0.48, 0.32, 0.30);
+    for (const x of [1.60, -1.60, -2.30]) {
+      addWheelArch(m, x, -0.44, 1.02, 0.56);
+      addWheelArch(m, x, -0.44, -1.02, 0.56);
+    }
     m.size = { w: 4.8, h: 2.9, d: 2.2 };
     m.ground = -0.92;
   }
@@ -333,6 +353,8 @@
     for (const x of [3.2, -2.4, -3.4]) {
       addWheel(m, x, -0.62, 1.28, 0.92, 0.52, 0.36, 0.32);
       addWheel(m, x, -0.62, -1.28, -0.92, 0.52, 0.36, 0.32);
+      addWheelArch(m, x, -0.62, 1.28, 0.60);
+      addWheelArch(m, x, -0.62, -1.28, 0.60);
     }
     m.size = { w: L, h: H, d: W };
     m.ground = -1.14;
@@ -364,6 +386,8 @@
     for (const x of [3.6, -2.8, -3.9]) {
       addWheel(m, x, -0.60, 1.30, 0.94, 0.54, 0.36, 0.32);
       addWheel(m, x, -0.60, -1.30, -0.94, 0.54, 0.36, 0.32);
+      addWheelArch(m, x, -0.60, 1.30, 0.62);
+      addWheelArch(m, x, -0.60, -1.30, 0.62);
     }
     m.size = { w: L, h: H, d: W };
     m.ground = -1.14;
@@ -391,12 +415,15 @@
     m.stroke(BB, [-0.05 - 0.14, -0.30, -0.16], 0.5, 0.18);
     // 车座
     addBox(m, -0.50, 0.28, -0.10, -0.24, 0.36, 0.10, PAL.dark, { lvl: 0.18, w: 0.6 });
-    // 人物：躯干
+    // 人物：躯干（下宽上窄，肩部收拢）
     addBox(m, -0.44, 0.34, -0.13, 0.02, 0.94, 0.13, PAL.shellHi, { lvl: 0.04, w: 0.9 });
+    addBox(m, -0.40, 0.74, -0.11, -0.02, 0.96, 0.11, PAL.shellHi, { lvl: 0.04, w: 0.9 });
     // 头
     addBox(m, -0.38, 0.98, -0.12, -0.14, 1.24, 0.12, PAL.shell, { lvl: 0.06, w: 0.8 });
     // 头盔
     addBox(m, -0.40, 1.16, -0.13, -0.12, 1.30, 0.13, PAL.dark, { lvl: 0.16, w: 0.6 });
+    // 头盔顶圆弧
+    addCylY(m, -0.26, 0, 1.29, 1.37, 0.135, 12, PAL.dark, { lvl: 0.16, w: 0.6 });
     // 手臂（伸向车把）
     m.stroke([0.00, 0.86, 0.12], [0.22, 0.64, 0.18], 0.7, 0.12);
     m.stroke([0.22, 0.64, 0.18], [0.38, 0.54, 0.10], 0.6, 0.12);
@@ -526,9 +553,13 @@
     return "default";
   }
 
+  /* 模型缓存：category|subtype → 几何体。跨面板（群像/缩略图/档案）复用，避免重复构建 */
+  const _modelCache = {};
   function buildModel(category, subtype) {
-    const m = new Mesh();
     const st = subtype || detectSubtype(category);
+    const key = category + "|" + st;
+    if (_modelCache[key]) return _modelCache[key];
+    const m = new Mesh();
     if (category === "person") buildRider(m, st === "delivery");
     else if (category === "vehicle") {
       if (st === "suv") buildSUV(m);
@@ -540,6 +571,7 @@
     else if (category === "infrastructure") buildStreetLight(m);
     else if (category === "appliance") buildOutdoorUnit(m);
     else buildSedan(m);
+    _modelCache[key] = m;
     return m;
   }
 
@@ -601,14 +633,19 @@
       const f = it.f;
       const pts = it.q.map(v => [cx + v[0] * scale * (dist / (dist - v[2])), cy - v[1] * scale * (dist / (dist - v[2]))]);
       // 亮度：由法线与光向决定
-      let n = f.n;
+      let n = f.n, wn = f.n;
       if (n) {
         const rn = Cam.rotate(n, yaw, pitch);
         const len = Math.hypot(rn[0], rn[1], rn[2]) || 1;
         n = [rn[0] / len, rn[1] / len, rn[2] / len];
       }
       const lam = n ? Math.max(0, n[0] * LIGHT[0] + n[1] * LIGHT[1] + n[2] * LIGHT[2]) : 0.7;
-      const k = 0.55 + lam * 0.85;
+      let k = 0.55 + lam * 0.85;
+      if (wn) {
+        if (wn[1] > 0.25) k += 0.20 * wn[1];            // 顶面高光
+        const facing = Math.abs(n ? n[2] : 1);
+        if (facing < 0.4) k += (0.4 - facing) * 0.5;     // fresnel 轮廓增亮
+      }
 
       ctx.beginPath();
       ctx.moveTo(pts[0][0], pts[0][1]);
@@ -685,23 +722,35 @@
       ctx.restore();
     }
 
-    // 描边（模型轮廓与细节线）
+    // 描边（模型轮廓与细节线）：fake-bloom = 宽而淡的辉光 + 明亮核心
+    // 单层遍历同时画辉光与核心（每 tier 仅遍历一次边），不使用 shadowBlur（软件渲染极慢）
     ctx.save();
     ctx.globalCompositeOperation = "screen";
     ctx.lineCap = "round";
-    for (const wgt of [0.55, 0.85, 1.25]) {
+    ctx.lineJoin = "round";
+    const tiers = [
+      { w: 0.55, gw: 3.4, ga: 0.10, cw: 0.6, ca: 0.26 },
+      { w: 0.85, gw: 2.6, ga: 0.16, cw: 0.82, ca: 0.44 },
+      { w: 1.25, gw: 1.9, ga: 0.22, cw: 1.15, ca: 0.74 }
+    ];
+    for (const t of tiers) {
       ctx.beginPath();
       let any = false;
       for (const e of m.edges) {
-        if (e.w > wgt + 0.01 || e.w <= wgt - 0.36) continue;
+        if (e.w > t.w + 0.01 || e.w <= t.w - 0.36) continue;
         const a = P(e.a), b = P(e.b);
         ctx.moveTo(a[0], a[1]);
         ctx.lineTo(b[0], b[1]);
         any = true;
       }
       if (!any) continue;
-      ctx.strokeStyle = "rgba(168,211,224," + (wgt === 1.25 ? 0.55 : wgt === 0.85 ? 0.34 : 0.2) + ")";
-      ctx.lineWidth = wgt === 1.25 ? 1.05 : wgt === 0.85 ? 0.7 : 0.5;
+      // 辉光层（宽、淡）
+      ctx.strokeStyle = "rgba(168,211,224," + t.ga + ")";
+      ctx.lineWidth = t.gw;
+      ctx.stroke();
+      // 核心层（细、亮）
+      ctx.strokeStyle = "rgba(190,230,242," + t.ca + ")";
+      ctx.lineWidth = t.cw;
       ctx.stroke();
     }
     ctx.restore();
@@ -773,7 +822,8 @@
       const r = this.canvas.getBoundingClientRect();
       this.w = Math.max(1, r.width || 300);
       this.h = Math.max(1, r.height || 240);
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      // 模型画布用 dpr=1：渐变填充面积直接减半，软件渲染下帧时间显著下降，肉眼几乎无差
+      const dpr = 1;
       this.canvas.width = Math.round(this.w * dpr);
       this.canvas.height = Math.round(this.h * dpr);
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -796,6 +846,7 @@
       this.start = (typeof performance !== "undefined" ? performance.now() : Date.now());
       this.resize();
       if (this.raf) cancelAnimationFrame(this.raf);
+      this._rlast = null;
       const loop = (time) => {
         const elapsed = time - this.start;
         const p = clamp(elapsed / this.duration, 0, 1);
@@ -803,17 +854,23 @@
         // 完成度更快爬升：主体在前 40% 时间内成型
         const completion = clamp((p - 0.06) / 0.42);
         const opacity = clamp((p - 0.08) / 0.06) * clamp((0.97 - p) / 0.05);
-        if (this.phase === "scan") {
-          renderScan(this.ctx, this.model, {
-            w: this.w, h: this.h, yaw: yaw, time: time,
-            completion: completion, opacity: opacity
-          });
-        } else {
-          renderSolid(this.ctx, this.model, {
-            w: this.w, h: this.h,
-            yaw: this.reduced ? -0.5 : -0.5 + time * 0.00022,
-            time: time
-          });
+        // 节流：模型旋转很慢，~30fps 渲染已足够，省一半开销
+        if (this._rlast == null) this._rlast = time;
+        const doRender = time - this._rlast >= 30;
+        if (doRender) {
+          this._rlast = time;
+          if (this.phase === "scan") {
+            renderScan(this.ctx, this.model, {
+              w: this.w, h: this.h, yaw: yaw, time: time,
+              completion: completion, opacity: opacity
+            });
+          } else {
+            renderSolid(this.ctx, this.model, {
+              w: this.w, h: this.h,
+              yaw: this.reduced ? -0.5 : -0.5 + time * 0.00022,
+              time: time
+            });
+          }
         }
         if (this.phase === "scan" && p >= 1) {
           this.phase = "solid";
@@ -830,8 +887,13 @@
       this.start = performance.now();
       this.resize();
       if (this.raf) cancelAnimationFrame(this.raf);
+      this._rlast = null;
       const loop = (time) => {
         if (this.phase !== "solid") return;
+        // 节流 ~30fps
+        if (this._rlast == null) this._rlast = time;
+        if (time - this._rlast < 30) { this.raf = requestAnimationFrame(loop); return; }
+        this._rlast = time;
         renderSolid(this.ctx, this.model, {
           w: this.w, h: this.h,
           yaw: this.reduced ? -0.5 : -0.5 + time * 0.00022,

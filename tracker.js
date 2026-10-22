@@ -79,12 +79,15 @@
 
   const mainLayer = layer; // #trackLayer
   let lastMainSize = "";
+  let lastT = 0;   // 帧间时间戳，用于缓动 dt
 
   /* ── 状态 ── */
   let selectedId = null;
   let toastTimer = null;
   const boxEls = new Map();   // objectId → DOM
   const lockEls = new Map();  // objectId → 锁定进度条 <i>
+  const velEls = new Map();   // objectId → 速度矢量 <span>
+  const confEls = new Map();  // objectId → 置信度 <span>
   const listEls = new Map();  // objectId → li
 
   // 空调档案模块（v7 handoff）：同源 iframe 集成状态
@@ -132,6 +135,7 @@
       : "";
     box.innerHTML =
       '<span class="c"></span>' +
+      '<span class="vel" aria-hidden="true"></span>' +
       '<div class="track-tag"><span>' + obj.labelEn + "</span>" +
       '<span class="conf">' + obj.conf.toFixed(2) + "</span>" +
       "<span>" + obj.objectId + "</span>" +
@@ -146,26 +150,34 @@
     layer.appendChild(box);
     boxEls.set(obj.objectId, box);
     lockEls.set(obj.objectId, box.querySelector(".lock i"));
+    velEls.set(obj.objectId, box.querySelector(".vel"));
+    confEls.set(obj.objectId, box.querySelector(".conf"));
   });
 
-  /* ── 关键帧线性插值 ── */
-  function interpolate(kfs, t) {
-    if (t <= kfs[0].t) return kfs[0];
+  /* ── 关键帧 Catmull-Rom 样条插值（比线性更顺滑，消除折线顿挫） ── */
+  function cr(p0, p1, p2, p3, t) {
+    const t2 = t * t, t3 = t2 * t;
+    return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+  }
+  function sampleProp(kfs, t, key) {
+    if (t <= kfs[0].t) return kfs[0][key];
     const last = kfs[kfs.length - 1];
-    if (t >= last.t) return last;
-    for (let i = 0; i < kfs.length - 1; i++) {
-      const a = kfs[i], b = kfs[i + 1];
-      if (t >= a.t && t <= b.t) {
-        const p = (t - a.t) / (b.t - a.t);
-        return {
-          x: a.x + (b.x - a.x) * p,
-          y: a.y + (b.y - a.y) * p,
-          w: a.w + (b.w - a.w) * p,
-          h: a.h + (b.h - a.h) * p,
-        };
-      }
-    }
-    return last;
+    if (t >= last.t) return last[key];
+    let i = 0;
+    while (i < kfs.length - 1 && !(t >= kfs[i].t && t <= kfs[i + 1].t)) i++;
+    const p1 = kfs[i], p2 = kfs[i + 1];
+    const seg = (t - p1.t) / ((p2.t - p1.t) || 1);
+    const p0 = kfs[i - 1] || p1;   // 端点处退化为线性，避免越界
+    const p3 = kfs[i + 2] || p2;
+    return cr(p0[key], p1[key], p2[key], p3[key], seg);
+  }
+  function interpolate(kfs, t) {
+    return {
+      x: sampleProp(kfs, t, "x"),
+      y: sampleProp(kfs, t, "y"),
+      w: sampleProp(kfs, t, "w"),
+      h: sampleProp(kfs, t, "h")
+    };
   }
 
   /* ── 点击选中 → 返回统一 objectId ── */
@@ -482,6 +494,8 @@
   /* 阶段二：档案 */
   function showDossier(obj) {
     oaPhase = "dossier";
+    // 停掉扫描播放器：避免其在隐藏画布上继续空转渲染
+    if (oaScanPlayer) oaScanPlayer.stop();
     oaScan.hidden = true;
     oaDossier.hidden = false;
     oaDossier.classList.add("is-revealing");
@@ -557,7 +571,16 @@
   }
 
   /* ── 主渲染循环 ── */
+  let lastDraw = 0;
   function render(time) {
+    // 帧间 dt（用于缓动）
+    if (!lastT) lastT = time;
+    const dt = Math.min(0.05, (time - lastT) / 1000);
+    lastT = time;
+    // 限到 ~30fps：识别框位移极慢，不必每帧全量重写 DOM（省主线程，保证点击响应）
+    if (time - lastDraw < 33) { requestAnimationFrame(render); return; }
+    lastDraw = time;
+
     const t = video.currentTime;
 
     // 框层尺寸对齐（尺寸变化时才重算）
@@ -575,7 +598,7 @@
     recTime.textContent = "REC 00:" + fmtTC(t);
     hudClock.textContent = "T+" + t.toFixed(2) + "s";
 
-    // 识别框跟随
+    // 识别框跟随（presence 缓动：出现/消失不再硬切）
     let onscreen = 0, energy = 0, water = 0, persons = 0;
     const lockedNow = [];
     objects.forEach((obj) => {
@@ -583,14 +606,41 @@
       const li = listEls.get(obj.objectId);
       const visible = t >= obj.appear && t <= obj.disappear;
 
+      // presence 0→1（入场）/ 1→0（离场）缓动
+      const target = visible ? 1 : 0;
+      if (obj._pres == null) obj._pres = 0;
+      obj._pres += (target - obj._pres) * Math.min(1, dt * 9);
+      if (!visible && obj._pres < 0.012) {
+        if (el.style.display !== "none") el.style.display = "none";
+        li.classList.remove("onscreen");
+        obj._logged = false;
+        return; // 完全离场，跳过后续更新
+      }
+      if (el.style.display === "none") el.style.display = "block";
+
       if (visible) {
         onscreen++;
         const b = interpolate(obj.keyframes, t);
-        el.style.display = "block";
+        // 速度矢量（相邻帧位移）
+        const dx = b.x - (obj._px == null ? b.x : obj._px);
+        const dy = b.y - (obj._py == null ? b.y : obj._py);
+        obj._px = b.x; obj._py = b.y;
         el.style.left   = (b.x * 100).toFixed(3) + "%";
         el.style.top    = (b.y * 100).toFixed(3) + "%";
         el.style.width  = (b.w * 100).toFixed(3) + "%";
         el.style.height = (b.h * 100).toFixed(3) + "%";
+        // 速度标记（沿运动方向的小箭头）
+        const vel = velEls.get(obj.objectId);
+        if (vel) {
+          const mag = Math.min(1, Math.hypot(dx, dy) * 42);
+          if (mag > 0.05) {
+            const ang = Math.atan2(dy, dx);
+            vel.style.opacity = (0.35 + 0.65 * mag).toFixed(2);
+            vel.style.transform = "rotate(" + ang.toFixed(3) + "rad) scale(" + (0.5 + 0.5 * mag).toFixed(3) + ")";
+          } else {
+            vel.style.opacity = "0";
+          }
+        }
         // 锁定进度条：目标出现后 1.2s 内填满 → 模拟识别锁定过程
         const lock = lockEls.get(obj.objectId);
         const lockPct = Math.min(100, ((t - obj.appear) / 1.2) * 100);
@@ -601,11 +651,21 @@
           obj._logged = true;
           lockedNow.push(obj);
         }
-      } else {
-        el.style.display = "none";
-        li.classList.remove("onscreen");
-        obj._logged = false;
       }
+
+      // 置信度实时抖动（模拟推断不确定度，使识别更"活"）
+      if (visible && time - (obj._lastConf || 0) > 380) {
+        obj._lastConf = time;
+        const cEl = confEls.get(obj.objectId);
+        if (cEl) {
+          const j = obj.conf + Math.sin(time * 0.013 + obj.appear) * 0.007 + (Math.random() - 0.5) * 0.012;
+          cEl.textContent = Math.max(0.2, Math.min(0.99, j)).toFixed(2);
+        }
+      }
+
+      // presence → 透明度 + 轻微缩放（替代硬切）
+      el.style.opacity = obj._pres.toFixed(3);
+      el.style.transform = "scale(" + (0.90 + 0.10 * obj._pres).toFixed(3) + ")";
 
       // 累计统计：已出现过的目标计入普查
       if (t >= obj.appear) {

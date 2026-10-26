@@ -561,6 +561,7 @@
 
   function renderSolid(ctx, m, o) {
     if (o.archive && window.ArchiveVisuals) return window.ArchiveVisuals.render(ctx, m, o);
+    if (m.technicalWire && window.ArchiveEngineering) return window.ArchiveEngineering.render(ctx, m, {...o, completion: 1, glitch: false});
     const w = o.w, h = o.h;
     const yaw = o.yaw, pitch = o.pitch == null ? -0.16 : o.pitch;
     const dist = 8.6;
@@ -712,6 +713,7 @@
 
   /* ─────────── 渲染：线网扫描（逐级揭示 + 旋转 + 频闪带） ─────────── */
   function renderScan(ctx, m, o) {
+    if (m.technicalWire && window.ArchiveEngineering) return window.ArchiveEngineering.render(ctx, m, o);
     if(m.cleanWire && window.RiderGeometry) return window.RiderGeometry.render(ctx,m,o);
     const w = o.w, h = o.h;
     const yaw = o.yaw, pitch = o.pitch == null ? 0.20 : o.pitch;

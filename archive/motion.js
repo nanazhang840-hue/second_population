@@ -12,7 +12,7 @@
   if(o.loading){const p=Math.max(0,Math.min(1,o.completion??1));ctx.beginPath();ctx.rect(0,h*(1-p),w,h*p);ctx.clip();}
   ctx.drawImage(b,0,0,w,h);
   if(!reduce()&&o.glitch!==false){
-   const t=o.time||0,frame=Math.floor(t/130),active=frame%19<7;
+   const t=o.time||0,frame=Math.floor(t/130),active=frame%43<3;
    // Broken acquisition bands move fragments of the actual artwork, not a second object.
    if(active){for(let i=0;i<(o.loading?7:5);i++){const yy=y+dh*(.08+hash(frame*7+i*11)*.83),hh=2+hash(frame+i*3)*Math.min(14,dh*.025),offset=(hash(frame*17+i*5)-.5)*(o.loading?60:44);
     ctx.fillStyle='#000';ctx.fillRect(x,yy,dw,hh);ctx.globalAlpha=.55+hash(frame+i)*.4;ctx.drawImage(b,0,yy,w,hh,offset,yy,w,hh);ctx.globalAlpha=1;
@@ -34,6 +34,6 @@
  }
  let raf=0,target=null,last=0;
  function stop(){if(raf)cancelAnimationFrame(raf);raf=0;target=null;last=0;}
- function start(canvas,obj){stop();if(obj.category!=='person')return;target={canvas,obj};const loop=time=>{if(!target||!canvas.isConnected)return;const container=document.getElementById('oaDossier');if(container.hidden){stop();return;}if(time-last>50){last=time;window.ArchiveScans.detail(canvas,obj,'assembly',{time,motion:true,energy:true,glitch:false});}if(!reduce())raf=requestAnimationFrame(loop);};raf=requestAnimationFrame(loop);}
+ function start(canvas,obj){stop();target={canvas,obj};const loop=time=>{if(!target||!canvas.isConnected)return;const container=document.getElementById('oaDossier');if(container.hidden){stop();return;}if(time-last>50||reduce()){last=time;if(window.ArchiveMechanisms)window.ArchiveMechanisms.render(canvas,obj,time);else window.ArchiveScans.detail(canvas,obj,'assembly',{time,motion:true,energy:true,glitch:false});}if(!reduce())raf=requestAnimationFrame(loop);};raf=requestAnimationFrame(loop);}
  window.ArchiveMotion={draw,energy,start,stop};
 })();

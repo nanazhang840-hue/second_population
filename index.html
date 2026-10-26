@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="archive/entry.css">
 <link rel="stylesheet" href="archive/ac-composition.css">
 <link rel="stylesheet" href="archive/reference-entry.css">
+<link rel="stylesheet" href="archive/inspection.css">
 </head>
 <body class="is-booting">
 
@@ -294,6 +295,8 @@
       <div class="scan-window">
         <div class="scan-crosses" id="oaCrosses" aria-hidden="true"></div>
         <canvas id="oaModelCanvas" class="scan-canvas" aria-label="目标三维模型旋转扫描"></canvas>
+        <div class="scan-study-label" aria-hidden="true">ENGINEERING STUDY / ILLUSTRATIVE</div>
+        <div class="scan-parts" id="oaScanParts" aria-hidden="true"></div>
         <span class="scan-corner sc-tl" aria-hidden="true"></span>
         <span class="scan-corner sc-br" aria-hidden="true"></span>
         <div class="scan-drift" aria-hidden="true"></div>
@@ -330,7 +333,7 @@
               <span id="oaViewLabel">VIEW 01/01</span>
             </div>
             <canvas id="oaSolidCanvas" class="approved-object" aria-label="目标实体模型"></canvas>
-            <span class="visual-caption">STRUCTURAL STUDY / ILLUSTRATIVE RECONSTRUCTION</span>
+            <span class="visual-caption"><span>STRUCTURAL STUDY / ILLUSTRATIVE RECONSTRUCTION</span><button id="oaInspect" type="button">3D VIEW ↗</button></span>
           </section>
           <div class="insets">
             <section class="dossier-box anatomy reveal r3">
@@ -352,6 +355,7 @@
               <p id="oaNameEn">TARGET LABEL</p>
             </div>
             <dl class="identity-table" id="oaIdentity"></dl>
+            <p class="archive-description" id="oaDescription"></p>
           </section>
 
           <section class="dossier-box carbon-box reveal r4">
@@ -426,6 +430,12 @@
   </div>
 </section>
 
+<dialog id="oaInspectionDialog" aria-labelledby="oaInspectionTitle">
+  <header><strong id="oaInspectionTitle" data-inspection-title>3D VIEW</strong><button type="button" data-action="close">BACK TO RECORD ×</button></header>
+  <canvas tabindex="0" aria-label="三维模型，拖动或用左右方向键旋转"></canvas>
+  <footer><button type="button" data-turn="-.22" aria-label="向左旋转">↶ TURN LEFT</button><button type="button" data-turn=".22" aria-label="向右旋转">TURN RIGHT ↷</button><button type="button" data-action="rotate" aria-pressed="false">AUTO ROTATE</button><button type="button" data-action="reset">RESET VIEW</button></footer>
+  <p>DRAG / ← → ROTATE · SCROLL TO ZOOM · ESC BACK · ILLUSTRATIVE MODEL</p>
+</dialog>
 <dialog id="oaSourceDialog"><button id="oaSourceClose" type="button">CLOSE ×</button><h2>SOURCE NOTES</h2><p id="oaSourceText"></p><p>Manufacturing energy, manufacturing water and use-phase carbon have different boundaries. Energy class is not a carbon value.</p></dialog>
 <script src="glitch.js"></script>
 <script src="model-loader/cam.js"></script>
@@ -435,10 +445,14 @@
   <script src="archive/rider-geometry.js"></script>
   <script src="archive/rider-approved.js"></script>
   <script src="archive/rider-gpu.js"></script>
+<script src="archive/engineering.js"></script>
 <script src="archive/scan-assets.js"></script>
+<script src="archive/mechanisms.js"></script>
   <script src="archive/motion.js"></script>
 <script src="archive/visuals.js"></script>
 <script src="archive/data.js"></script>
+<script src="archive/catalog.js"></script>
+<script src="archive/inspection.js"></script>
 <script src="archive/entry.js"></script>
 <script src="panels.js"></script>
 <script src="tracker.js"></script>

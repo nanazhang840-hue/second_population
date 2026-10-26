@@ -20,7 +20,7 @@
   }
   return null;
  }
- function draw(ctx,kind,view,w,h,o={}){if(!['rider','delivery','ebike'].includes(kind))return false;const item=describe(kind,view);if(!item)return false;ctx.clearRect(0,0,w,h);const image=item.image;
+ function draw(ctx,kind,view,w,h,o={}){if(view!=='main'&&!['rider','delivery','ebike'].includes(kind))return false;const item=describe(kind,view);if(!item)return false;ctx.clearRect(0,0,w,h);const image=item.image;
   if(!image.complete||!image.naturalWidth){if(!pending.has(ctx.canvas)){const redraw=()=>{pending.delete(ctx.canvas);if(ctx.canvas.isConnected!==false)draw(ctx,kind,view,w,h);};pending.set(ctx.canvas,redraw);image.addEventListener('load',redraw,{once:true});}return true;}
   if(o.motion&&window.ArchiveMotion){const rect=window.ArchiveMotion.draw(ctx,image,item.region,w,h,o);if(o.energy)window.ArchiveMotion.energy(ctx,rect,o.time||0);return true;}
   const [rx,ry,rw,rh]=item.region,sx=rx*image.naturalWidth,sy=ry*image.naturalHeight,sw=rw*image.naturalWidth,sh=rh*image.naturalHeight;

@@ -53,6 +53,7 @@
   }
 
   const objects = data.objects;
+  if (window.ArchiveCatalog) await window.ArchiveCatalog.load(objects);
   const duration = data.duration;
 
   // 真实能耗最大值：用于相对强度条（不再写死 45000）
@@ -111,7 +112,6 @@
       '<div class="t-time">' + timeText + "</div>";
     li.addEventListener("click", () => {
       video.currentTime = obj.appear + 0.05;
-      video.play();
       selectObject(obj.objectId);
     });
     targetList.appendChild(li);
@@ -173,7 +173,7 @@
     const obj = objects.find((o) => o.objectId === objectId);
     if (!obj) return;
 
-    if (idx != null) currentOrderIndex = idx;
+    currentOrderIndex = idx != null ? idx : (idToOrderIndex.get(objectId) ?? 0);
 
     // 空调目标：打开全屏 v7 专用档案模块
     if (obj.isAc) { if (objArchiveOpen) closeObjectArchive(); openAcArchive(); return; }
@@ -189,7 +189,6 @@
     const obj = order[next];
     const maxT = video.duration || duration;
     video.currentTime = Math.min(maxT, obj.appear + 0.1);
-    video.play().catch(() => {});
     selectObject(obj.objectId, next);
   }
 
@@ -241,6 +240,7 @@
 
   // 键盘导航：档案打开时左右切换目标，Esc 关闭
   document.addEventListener("keydown", (e) => {
+    if (document.getElementById("oaInspectionDialog")?.open) return;
     if (document.getElementById("oaSourceDialog")?.open) return;
     if (acArchiveOpen) {
       if (e.key === "Escape") { e.preventDefault(); closeAcArchive(); }
@@ -280,6 +280,7 @@
     const api = ensureAcApi();
     if (!api) { showToast("AC ARCHIVE 模块加载中…"); return; }
     acArchiveOpen = true;
+    rememberScene();
     acFrame.hidden = false;          // 先可见，画布才能取得正确尺寸
     acFrameClose.hidden = false;
     video.pause();
@@ -299,7 +300,7 @@
     if (acApi && typeof acApi.close === "function") {
       try { acApi.close(); } catch (err) {}
     }
-    video.play().catch(() => {});
+    restoreScene();
   }
 
   acFrameClose.addEventListener("click", closeAcArchive);
@@ -342,6 +343,29 @@
   let oaCurrent = null;         // 当前目标对象
   let oaRevealTimer = null;
   let oaScanRaf = null;
+  let sceneState = null;
+  function rememberScene() {
+    if (!sceneState) sceneState = { paused: video.paused, focus: document.activeElement, overflow: document.body.style.overflow };
+  }
+  function restoreScene() {
+    const saved = sceneState; sceneState = null;
+    document.body.style.overflow = saved?.overflow ?? '';
+    if (saved && !saved.paused) video.play().catch(() => {});
+    else video.pause();
+    if (saved?.focus?.isConnected) saved.focus.focus({ preventScroll: true });
+  }
+  const inspection = new window.ArchiveInspection(document.getElementById('oaInspectionDialog'));
+  document.getElementById('oaInspect').addEventListener('click', () => {
+    if (!oaCurrent || oaPhase !== 'dossier') return;
+    if (oaSolidPlayer) oaSolidPlayer.stop();
+    if (window.ArchiveMotion) window.ArchiveMotion.stop();
+    inspection.open(oaCurrent);
+  });
+  inspection.onClose = () => {
+    if (!objArchiveOpen || oaPhase !== 'dossier' || !oaCurrent) return;
+    oaSolidPlayer?.showSolid(oaCurrent.category, window.ArchiveCatalog.subtype(oaCurrent));
+    window.ArchiveMotion?.start(oaProfileCanvas, oaCurrent);
+  };
 
   if (oaCrosses) oaCrosses.innerHTML = "<span></span>".repeat(20);
 
@@ -350,25 +374,28 @@
     const A=window.ArchiveData;
     oaSubject.textContent='SUBJECT '+obj.objectId;
     oaName.textContent=obj.labelEn.toUpperCase();
-    oaNameEn.textContent=A.type(obj)+' / SECOND POPULATION';
+    oaNameEn.textContent=obj.label+' / '+A.type(obj);
+    const record = window.ArchiveCatalog.get(obj);
+    document.getElementById('oaDescription').textContent = record?.description || '';
     oaIdentity.innerHTML=A.identity(obj);
     oaResourceUnit.textContent=A.type(obj);
     document.querySelector('#objArchive .resource-unit svg').innerHTML=A.symbol(obj);
-    oaViewLabel.textContent='VIEW 01 / 03';
+    oaViewLabel.textContent='PORTRAIT / 3D VIEW AVAILABLE';
     oaCarbonValue.textContent='DATA PENDING';
     document.getElementById('oaCarbonExpression').innerHTML=A.expression(obj);
     document.getElementById('oaCarbonUnit').textContent='kg CO₂e / year';
-    oaCarbonNote.textContent='VEHICLE ONLY / ENERGY USE, REGION, YEAR AND FACTOR REQUIRED.';
-    oaFooterNote.textContent='ILLUSTRATIVE MODEL / VEHICLE DATA NOT YET VERIFIED.';
+    const vehicle = obj.category === 'person' || obj.category === 'vehicle';
+    oaCarbonNote.textContent=(vehicle?'VEHICLE':'OBJECT')+' OPERATION ONLY / ENERGY RECORD AND SOURCED FACTOR REQUIRED.';
+    oaFooterNote.textContent='ILLUSTRATIVE MODEL / OBJECT DATA NOT YET VERIFIED.';
     document.getElementById('oaInsetOne').textContent=obj.category==='infrastructure'?'STRUCTURE / GEOMETRY':'WHEEL / CONSTRUCTION';
-    document.getElementById('oaInsetTwo').textContent=obj.category==='person'?'ENERGY MODULE / FLOW SIMULATION':'THERMAL SYSTEM / SCHEMATIC';
+    document.getElementById('oaInsetTwo').textContent=window.ArchiveMechanisms.title(obj);
     document.getElementById('oaSourceText').textContent=A.sourceNotes(obj);
   }
 
   /* 缩略图：线框结构 + 侧影视图（一次性静态渲染） */
   function renderArchiveInsets(obj) {
     if (!window.ModelEngine) return;
-    if (window.ArchiveVisuals && obj.category!=="infrastructure") { requestAnimationFrame(()=>{ if(oaCurrent!==obj||!objArchiveOpen)return; window.ArchiveVisuals.detail(oaWireCanvas,obj,"wheel");window.ArchiveVisuals.detail(oaProfileCanvas,obj,"assembly"); }); return; }
+    if (window.ArchiveVisuals) { requestAnimationFrame(()=>{ if(oaCurrent!==obj||!objArchiveOpen)return; window.ArchiveVisuals.detail(oaWireCanvas,obj,"wheel");window.ArchiveVisuals.detail(oaProfileCanvas,obj,"assembly"); }); return; }
     const subtype = window.ModelEngine.detectSubtype(obj.category, obj.labelEn);
     const model = window.ModelEngine.buildModel(obj.category, subtype);
     const draw = (canvas, mode, yaw) => {
@@ -397,6 +424,8 @@
 
   /* 阶段一：扫描 */
   function runScan(obj) {
+    oaPhase = 'scan';
+    inspection.close();
     if(window.ArchiveMotion)window.ArchiveMotion.stop();
     oaEntry.cancel();
     if(oaScanPlayer)oaScanPlayer.stop();
@@ -409,6 +438,9 @@
     oaDossier.classList.remove("is-open", "is-revealing");
     oaScanId.textContent = obj.objectId;
     document.getElementById("oaScanType").textContent=window.ArchiveData.type(obj)+" / 01";
+    const subtype=window.ArchiveCatalog.subtype(obj);
+    const parts=obj.category==='person'?['HELMET','RIDER','FRAME','DRIVE']:subtype==='truck'?['CAB','CARGO BODY','CHASSIS','RUNNING GEAR']:obj.category==='infrastructure'?['MAST','ARM','LED ARRAY','BASE']:['BODY','GLAZING','RUNNING GEAR','THERMAL'];
+    document.getElementById('oaScanParts').replaceChildren(...parts.map(label=>{const span=document.createElement('span');span.textContent=label;return span;}));
     oaFootnoteId.textContent = obj.objectId;
     oaScanStatus.textContent = "INITIALIZING";
     oaScanShell.style.setProperty('--frame-opacity','0');
@@ -442,7 +474,7 @@
     if (window.ModelEngine) {
       if (!oaScanPlayer) oaScanPlayer = new window.ModelEngine.Player(document.getElementById("oaModelCanvas"));
       oaScanPlayer.attach(document.getElementById("oaModelCanvas"));
-      oaScanPlayer.play(obj.category, window.ModelEngine.detectSubtype(obj.category, obj.labelEn), {
+      oaScanPlayer.play(obj.category, window.ArchiveCatalog.subtype(obj), {
         duration: duration,
         started: start,
         onDone: function () { if(oaScanPlayer)oaScanPlayer.stop(); if(objArchiveOpen && oaCurrent===obj)showDossier(obj); }
@@ -469,11 +501,12 @@
     if (window.ModelEngine) {
       if (!oaSolidPlayer) oaSolidPlayer = new window.ModelEngine.Player(oaSolidCanvas);
       oaSolidPlayer.attach(oaSolidCanvas);
-      oaSolidPlayer.showSolid(obj.category, window.ModelEngine.detectSubtype(obj.category, obj.labelEn));
+      oaSolidPlayer.showSolid(obj.category, window.ArchiveCatalog.subtype(obj));
     }
   }
 
   function openObjectArchive(obj) {
+    rememberScene();
     selectedId = obj.objectId;
     oaCurrent = obj;
     boxEls.forEach((el, id) => el.classList.toggle("selected", id === obj.objectId));
@@ -492,6 +525,8 @@
   function closeObjectArchive() {
     if (!objArchiveOpen) return;
     objArchiveOpen = false;
+    inspection.close();
+    if (document.getElementById('oaSourceDialog').open) document.getElementById('oaSourceDialog').close();
     if(window.ArchiveMotion)window.ArchiveMotion.stop();
     objArchive.hidden = true;
     objArchive.setAttribute("aria-hidden","true");
@@ -502,7 +537,7 @@
     if (oaScanRaf) cancelAnimationFrame(oaScanRaf);
     if (oaRevealTimer) clearTimeout(oaRevealTimer);
     if (Panels.library && Panels.library.markActive) Panels.library.markActive(null);
-    video.play().catch(function () {});
+    restoreScene();
   }
 
   objArchiveClose.addEventListener("click", closeObjectArchive);
@@ -627,7 +662,7 @@
 
   video.addEventListener("loadedmetadata", () => {
     lastMainSize = "";
-    video.play().catch(() => { playBtn.textContent = "▶"; });
+    if (!objArchiveOpen && !acArchiveOpen) video.play().catch(() => { playBtn.textContent = "▶"; });
   });
 
   window.addEventListener("resize", () => {
@@ -648,7 +683,6 @@
         if (obj.isAc) { openAcArchive(); return; }
         const maxT = video.duration || duration;
         video.currentTime = Math.min(maxT, obj.appear + 0.1);
-        video.play().catch(() => {});
         selectObject(obj.objectId);
       });
     }

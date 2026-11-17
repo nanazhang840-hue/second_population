@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第二人口 · 空间化物体库</title>
+<link rel="stylesheet" href="space/space.css">
+</head>
+<body>
+<canvas id="spaceCanvas"></canvas>
+<div id="vignette"></div>
+
+<!-- 唯一的界面层：左侧一条索引、右上检索、右下角标。没有监控外框与时间码。 -->
+<div id="hud">
+  <div class="brand">
+    <div class="brand-l1">THE SECOND POPULATION</div>
+    <div class="brand-l2">ARCHIVE SYSTEM</div>
+  </div>
+
+  <nav class="cats" id="cats">
+    <button class="cat active" data-cat="all">ALL</button>
+    <button class="cat" data-cat="vehicles">VEHICLE</button>
+    <button class="cat" data-cat="lighting">INFRASTRUCTURE</button>
+    <button class="cat" data-cat="signage">SIGNAGE</button>
+    <button class="cat" data-cat="barriers">BARRIER</button>
+    <button class="cat" data-cat="ground">SURFACE</button>
+    <button class="cat" data-cat="facility">PUBLIC FACILITY</button>
+  </nav>
+
+  <div class="total">
+    <div class="total-k">TOTAL</div>
+    <div class="total-v" id="totalCount">—</div>
+  </div>
+
+  <div class="finder">
+    <input id="searchInput" type="text" placeholder="Search objects…" autocomplete="off" spellcheck="false">
+    <div class="modes"><span class="on">GRID</span><span>SPACE</span><span>LIST</span></div>
+  </div>
+
+  <div class="corner"></div>
+</div>
+
+<div id="selBox"></div>
+<div id="recLabel"><b id="recId"></b><i id="recClass"></i></div>
+<div id="hint">拖动微调视角 · 点击物体查看档案 · 左侧按类筛选</div>
+<section id="observationRecord" hidden aria-label="选中物件">
+  <img alt="">
+  <div><small></small><strong></strong><p></p></div>
+  <div class="observation-actions">
+    <button type="button" id="inspectVehicle" hidden>旋转查看车辆</button>
+    <button type="button" id="openObservationArchive">查看个体档案 ↗</button>
+  </div>
+</section>
+<dialog id="vehicleInspection" aria-labelledby="vehicleInspectionTitle">
+  <header>
+    <div><small></small><h2 id="vehicleInspectionTitle"></h2></div>
+    <form method="dialog"><button type="submit" autofocus>返回物件空间 ×</button></form>
+  </header>
+  <div class="vehicle-inspection-stage" aria-label="车辆三维模型"></div>
+  <p role="status" class="vehicle-inspection-status"></p>
+  <footer>
+    <span>同类结构示意 · 拖动旋转，滚轮缩放</span>
+    <div aria-label="模型操作">
+      <button type="button" data-adjust="left">向左转</button>
+      <button type="button" data-adjust="right">向右转</button>
+      <button type="button" data-adjust="far">缩小</button>
+      <button type="button" data-adjust="near">放大</button>
+    </div>
+  </footer>
+</dialog>
+<div id="debug"></div>
+
+<div id="boot"><span>INDEXING OBJECTS</span></div>
+
+<script src="model-loader/model-engine.js"></script>
+<script src="archive/models.js"></script>
+<script src="archive/data.js"></script>
+<script src="archive/catalog.js"></script>
+<script type="module" src="space/main.js"></script>
+</body>
+</html>

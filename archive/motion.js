@@ -32,8 +32,9 @@
   // Keep the hardware and its brightness steady; only current markers move.
   ctx.restore();
  }
- let raf=0,target=null,last=0;
- function stop(){if(raf)cancelAnimationFrame(raf);raf=0;target=null;last=0;}
- function start(canvas,obj){stop();target={canvas,obj};const loop=time=>{if(!target||!canvas.isConnected)return;const container=document.getElementById('oaDossier');if(container.hidden){stop();return;}if(time-last>50||reduce()){last=time;if(window.ArchiveMechanisms)window.ArchiveMechanisms.render(canvas,obj,time);else window.ArchiveScans.detail(canvas,obj,'assembly',{time,motion:true,energy:true,glitch:false});}if(!reduce())raf=requestAnimationFrame(loop);};raf=requestAnimationFrame(loop);}
+ let raf=0,target=null,last=0,resume=null;
+ function stop(){if(raf)cancelAnimationFrame(raf);raf=0;target=null;last=0;resume=null;}
+ function start(canvas,obj){stop();target={canvas,obj};const loop=time=>{if(document.hidden||!target||!canvas.isConnected)return;const container=document.getElementById('oaDossier');if(container.hidden){stop();return;}if(time-last>50||reduce()){last=time;if(window.ArchiveMechanisms)window.ArchiveMechanisms.render(canvas,obj,time);else window.ArchiveScans.detail(canvas,obj,'assembly',{time,motion:true,energy:true,glitch:false});}if(!reduce())raf=requestAnimationFrame(loop);};resume=loop;raf=requestAnimationFrame(loop);}
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(target&&resume)raf=requestAnimationFrame(resume);});
  window.ArchiveMotion={draw,energy,start,stop};
 })();

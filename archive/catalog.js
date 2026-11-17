@@ -23,18 +23,24 @@
   async function load(objects) {
     records = new Map();
     try {
-      const response = await fetch('archive/records.json');
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      const items = validate(await response.json(), objects);
+      const embedded=objects.map(o=>o.archive).filter(r=>r?.objectId);
+      const items = validate({version:1,records:embedded}, objects);
       records = new Map(items.map(r => [r.objectId, r]));
       return { count: records.size, error: null };
     } catch (error) {
-      console.warn('[ARCHIVE] Editable records unavailable; using original target annotations.', error);
+      console.warn('[ARCHIVE] Invalid embedded extension; using original target annotations.', error);
       return { count: 0, error: error.message };
     }
   }
-  function get(obj) { return records.get(obj.objectId) || null; }
-  function subtype(obj) { return get(obj)?.model || window.ModelEngine.detectSubtype(obj.category, obj.labelEn); }
+  function get(obj) { return obj.archive?.objectId===obj.objectId ? obj.archive : records.get(obj.objectId) || null; }
+  const streetLabels = ['METRO SIGN','GANTRY SIGN','CAMERA POLE','BARRIER','GUARDRAIL','KERB','ARROW','MANHOLE','FENCE','SIGN','LANE MARK','BANNER','BIKE RACK'];
+  function studyKind(obj) {
+    const label=(obj.labelEn||'').trim().toUpperCase();
+    if (/\bVAN\b/.test(label)) return 'van';
+    if (/\bMPV\b/.test(label)) return 'mpv';
+    return streetLabels.includes(label)?label.toLowerCase().replaceAll(' ','-'):null;
+  }
+  function subtype(obj) { return studyKind(obj) || get(obj)?.model || window.ModelEngine.detectSubtype(obj.category, obj.labelEn); }
   const originalIdentity = window.ArchiveData.identity, originalNotes = window.ArchiveData.sourceNotes;
   window.ArchiveData.identity = obj => originalIdentity(obj) + (get(obj)?.details || []).map(d =>
     '<div class="id-row"><dt>' + window.ArchiveData.escape(d.label) + '</dt><dd>' + window.ArchiveData.escape(d.value) + '</dd></div>'
@@ -50,5 +56,5 @@
       record.details.map(d => '\n\n' + d.label + ': ' + d.value + '\nSource: ' + d.source).join('') +
       '\n\nMODEL MAPPING\n' + record.category + ' / ' + record.model + ' — shared illustrative model family; not a verified make or exact reconstruction.';
   };
-  window.ArchiveCatalog = { load, validate, get, subtype };
+  window.ArchiveCatalog = { load, validate, get, subtype, studyKind };
 })();

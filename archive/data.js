@@ -15,6 +15,8 @@
  }
  function identity(obj){
   let html=row('ID',obj.objectId)+row('TYPE',type(obj))+row('FUNCTION',obj.function||'UNVERIFIED');
+  const criterion=window.PopulationCriterion&&window.PopulationCriterion.of(obj);
+  if(criterion)html+=row('HUMAN FUNCTION',criterion.role+' · '+criterion.human);
   html+=row('MODEL','NOT IDENTIFIED')+row('ENERGY SOURCE','NOT VERIFIED')+row('ENERGY STATUS','UNRATED / DATA PENDING');
   return html;
  }

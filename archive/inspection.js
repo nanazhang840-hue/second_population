@@ -9,10 +9,14 @@
       this.toggle = dialog.querySelector('[data-action="rotate"]');
       this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
       this.yaw = -.62; this.zoom = 1; this.raf = null; this.drag = null;
+      this.pitch=.16;
+      const views=document.createElement('span');views.className='inspection-views';views.innerHTML='<button type="button" data-view-angle="front">FRONT</button><button type="button" data-view-angle="side">SIDE</button><button type="button" data-view-angle="top">TOP</button>';
+      dialog.querySelector('footer').append(views);
+      views.addEventListener('click',e=>{const view=e.target.dataset.viewAngle;if(!view)return;this.setAuto(false);this.yaw=view==='front'?Math.PI/2:0;this.pitch=view==='top'?Math.PI/2:0;this.canvas.dataset.view=view;this.draw();});
       this.resizeObserver = new ResizeObserver(() => this.draw());
       this.resizeObserver.observe(this.canvas);
       dialog.querySelector('[data-action="close"]').addEventListener('click', () => this.close());
-      dialog.querySelector('[data-action="reset"]').addEventListener('click', () => { this.yaw = this.homeYaw; this.zoom = 1; this.draw(); });
+      dialog.querySelector('[data-action="reset"]').addEventListener('click', () => { this.yaw = this.homeYaw; this.pitch=.16;this.zoom = 1; this.draw(); });
       this.toggle.addEventListener('click', () => this.setAuto(!this.auto));
       dialog.querySelectorAll('[data-turn]').forEach(button => button.addEventListener('click', () => this.turn(Number(button.dataset.turn))));
       this.canvas.addEventListener('pointerdown', e => {
@@ -49,7 +53,7 @@
       this.dialog.querySelector('[data-inspection-title]').textContent = obj.objectId + ' / ' + obj.label;
       this.canvas.setAttribute('aria-label', obj.label + '三维示意模型，左右方向键旋转');
       this.homeYaw = obj.category === 'person' ? -3.1 : -.62;
-      this.yaw = this.homeYaw; this.zoom = 1;
+      this.yaw = this.homeYaw; this.pitch=.16;this.zoom = 1;
       this.dialog.showModal(); this.draw(); this.setAuto(!this.reduced.matches);
     }
     turn(amount) { this.setAuto(false); this.yaw += amount; this.draw(); }
@@ -82,7 +86,7 @@
       this.ctx.clearRect(0, 0, w, h);
       // renderSolid without archive:true uses geometry, never the dossier bitmap.
       this.ctx.save(); this.ctx.translate(w/2, h/2); this.ctx.scale(this.zoom, this.zoom); this.ctx.translate(-w/2, -h/2);
-      const options = { w, h, yaw: this.yaw, pitch: .16, time: 0, completion: 1, opacity: 1 };
+      const options = { w, h, yaw: this.yaw, pitch: this.pitch, time: 0, completion: 1, opacity: 1 };
       if (this.model.detailKind === 'rider' && window.RiderGeometry) window.RiderGeometry.render(this.ctx, this.model, options);
       else window.ModelEngine.renderSolid(this.ctx, this.model, options);
       this.ctx.restore();

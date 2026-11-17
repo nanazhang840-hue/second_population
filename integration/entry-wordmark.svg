@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 452 116">
+  <g fill="#d0d3c8">
+    <!-- 第 · chamfered bamboo radical and segmented lower strokes -->
+    <path d="M18 6h20l-8 12h22v11H22l-6 8H2zm49 0h20l-7 11h26v11H74l-6 9H55z"/>
+    <path d="M26 30h12l6 8H30zm54 0h12l6 8H84z"/>
+    <path fill-rule="evenodd" d="M8 41h93l6 6v24H26l-1 7h77l6 6v23l-6 5H77V98h12v-6H8V60h78v-7H8zm36 9v56h14V50z"/>
+    <path d="M45 45h17v67H43V89l-22 23H1l26-28h17z"/>
+    <!-- 二 · parallel rails -->
+    <path d="M132 27h86v11l-9 9h-87V37zm-6 57h95v11l-9 10h-96V94z"/>
+    <!-- 人 · paired diagonal supports -->
+    <path d="M272 17h13v17l-39 78h-26l52-81zm17 0h10l-2 17-8 18zm9 25 45 70h-25l-30-53z"/>
+    <!-- 口 · camera housing with an open aperture -->
+    <path fill-rule="evenodd" d="M365 22h70l13 12v65l-12 13h-86V37zm8 19v50h52V41z"/>
+  </g>
+</svg>
